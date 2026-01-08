@@ -1,0 +1,5 @@
+/.idea
+/node_modules
+/transactionFiles
+/analyzeResults
+.DS_Store

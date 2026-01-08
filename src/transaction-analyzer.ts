@@ -1,5 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import {CsvError, parse} from 'csv-parse';
 
 type Transaction = {
@@ -10,6 +10,7 @@ type Transaction = {
     name: string;
     title: string;
     referenceNumber: string;
+    balance: string;
     currency: string;
 };
 
@@ -29,31 +30,50 @@ interface Expenses {
 
 const SKIP_SHOPS_SHORT_NAMES = [
     "ATM",
-    "ROMANOV ALEKSANDR", "Foundation For Student Housing",
-    "Autodoc AG", // Vasya
-    "VERKKOKAUPPA.COM MYYMALAT", // monitor
-    "Paysend EU", "Every Day Use OP", "Mw A Shutova", "Valery Selenin", // personal
-    "NH COLLECTION MILANO CITY", // Milan trip
-    "PIHLAJALINNA HA", //Partio insurance should cover
-    "AUTODOC", "KLM", // returned
+    // "ROMANOV ALEKSANDR", "Foundation For Student Housing",
+    // "Autodoc AG", // Vasya
+    // "VERKKOKAUPPA.COM MYYMALAT", // monitor
+    // "Paysend EU", "Every Day Use OP", "Mw A Shutova", "Valery Selenin", // personal
+    // "NH COLLECTION MILANO CITY", // Milan trip
+    // "PIHLAJALINNA HA", //Partio insurance should cover
+    // "AUTODOC", "KLM", // returned
     "TIKHOMIROV VLADIMIR",
+    "Vladimir Tikhomirov",
     "Interactive Brokers", "Bitstamp", // investments, which are not expenses as such
-    "Lahitapiola Rahoitus", // Valentin
+    // "Lahitapiola Rahoitus", // Valentin
+    // "Jusek Adlersztejn", // deposit for Berlin's flat
+    "AMAZON* R46Z74LV4", // kinderwagen that we returned
 ];
 
 const FOOD_SHOPS_SHORT_NAMES = ["ALEPA", "LIDL", "PRISMA", "K-supermarket", "K-market", "S-Market", "K-Citymarket",
     "K market", "MINIMARKET", "S MARKET", "LENTA", "EDEKA", "PEREKRESTOK", "DISAS",
     "Netto", "KAUFLAND", "ALDI", // german food shops
     "RIMI", // estonian food shop
+    "REWE",
+    "MERCADONA",
+    "SUPERMERCADOS",
+    "ELLI",
+    "ZABKA", // Polish supermarket
+    "CONSUM",
 ];
 const HOUSE_SHOPS_SHORT_NAMES = ["Asunto Oy Kuparikartano", "IKEA", "K-Rauta", "Helen Oy", "TIKHOMIROV V TAI WEINER C",
-    "Elisa Oyj", "BAUHAUS", "MIKKO UGOLNIKOV", "Gigantti",
-    "JARKKO MIKAEL", // Sofa
+    "Elisa Oyj", "BAUHAUS", "BAUMARKT", "MIKKO UGOLNIKOV", "Gigantti",
     "DNA", // internet
     "BILTEMA",
     "AURORANLINNA", // renting
     "HOUSINGANY", // Berlin renting
     "KUMAR RAJU", // bed
+    "LVI PALVELU TUKIAINEN", // Hana installation
+    "Von Haugwitz Gotthard", // Lippstadt renting
+    "Vodafone",
+    "ACTION 3038", // Erwitte
+    "MONTANA", // electricity
+    "MEDIA MARKT",
+    "Rundfunk ARD, ZDF, DRadio",
+    "ROSSMANN",
+    "JYSK",
+    "MEDIAMARKT",
+    "ARTUR KARAZANOV",
 ];
 const KIDS_FAMILY_NAMES = ["Phoenix Partners Ky/LaughLearn", "MUSTI JA MIRRI", "VETKLINIKA VOLF", "EVGENIJA KRUGLOVA",
     "PERHEKESKUS MARIA RY", "Seikkailupuisto Korkee", "HIIHTOSEURA",
@@ -63,7 +83,13 @@ const KIDS_FAMILY_NAMES = ["Phoenix Partners Ky/LaughLearn", "MUSTI JA MIRRI", "
     "HELSINGIN UIMARIT",
     "Christina Weiner FI",
     "HGIN KAUPUNKI/ TALPA/LASKUTUS", // продленка
-    "BADMINTON CLUB", 
+    "BADMINTON CLUB",
+    "Cetus Espoo ry", // swim
+    "IVANCHSHICOVA", "Yelena Simonenko",
+    "KORKEASAAREN ELAIN",
+    "SUOMISPORT", // chess license for Leo
+    "Christina Weiner", // aliments
+    "HELSINGIN KAUPUNKI", // продленка
 ];
 const SPORT_FOOD_FUN_NAMES = ["TALIHALLI", "ACTIVE GROUP RY", "VFI*Rami's Coffee Oy", "Inna Repo", "Asian Fusion Oy",
     "SEIKKAILUPUISTO ZIPPY", "INTER RAVINTOLA", "INTER PIZZA", "Electrobike", "XXL", "RESTAURANT", "PoplaCandy",
@@ -85,6 +111,20 @@ const SPORT_FOOD_FUN_NAMES = ["TALIHALLI", "ACTIVE GROUP RY", "VFI*Rami's Coffee
     "ROCKTHESPORT", // Marathon
     "Starcart", // watch brother
     "MCD", // MacDuck
+    "RAMEN",
+    "BAECKEREI", "BACKEREI",
+    "RISTORANTE",
+    "PIZZA",
+    "PETERS PRALINCHEN",
+    "KEBAB",
+    "KEBAP",
+    "PRALINENSHOP PETERS",
+    "Lippstaedter Turnverein",
+    "BACKHAUS LIENING",
+    "SUEWOLTO BECKUMER",
+    "CABRIOLI",
+    "SOLBAD",
+    "GOLD WOK",
 ];
 const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PARKMAN", "Parking", "TANKSTELLE",
     "AIMO PARK", "Teboil", "SHELL", "LansiAuto", "ODNO KOLESO", "TANKSTATION", "Aral Station", "TRAFICOM", "SHELL",
@@ -94,6 +134,12 @@ const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PAR
     "TAXI", "EASYPARK", "BOLT",
     "VOBA BECKUM-LIPPSTADT",
     "JORMA AULIS HALON", // bought skoda
+    "METRO", "UBER",
+    "TOTAL SERVICE STATION",
+    "STAR",
+    "ESSO STATION", // petrol station
+    "PARKSERVICE",
+    "A.T.U.",
 ];
 const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel", "BOLT", "PAYTRAIL",
     "DIRECTF", "MOTEL", "RENT A CAR", "RAILW", "CORENDONAIRLINES", "FINNAIR", "SAMUEL LINDBLOM",
@@ -109,37 +155,62 @@ const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel"
     "LuxExpress", "BALTICSHUTTLE", "ECOLINES", // buses to Russia
     "VIKINGLINE", "ECKERO LINE", "DIRECT FERR", // ferries to Tallinn
     "AIRBNB",
-    "DBVERTRIEBG A", // Deutsche Bahn
+    "DBVERTRIEBG A", "DB Vertrieb", // Deutsche Bahn
     "WIZZ AIR",
     "AIRBALTIC",
     "elron", // Estonian train
     "KALEVSPA",
     "GKD GLOBAL FZE LLC", // Russian e-visa
     "RUSTRAVEL",
+    "HOSTAL",
+    "VISA ZW RENOMA SP ZOO", // Gdansk transport
+    "MUZEUM",
+    "WIZZAIR",
+    "FLIXBUS",
+    "BVG",
 ];
 const HEALTH_NAMES = ["TERVEYSTALO MYYRMAKI", "Specsavers", "Malminkartanon apteekki", "CENTR KORREKCII ZRENIYA",
     "APTEKA", "SILMAASEMA", "HUS", "APOTHEKE", "ELAINSAIRAALA", "Apteekki", "Myyrmannin apt", "Fysio Sakura",
-    "apteek"];
+    "apteek", "FARMACIA", "MISTER SPEX" // contact lenses
+];
 const INSURANCE_NAMES = ["POHJOLA VAKUUTUS OY", "IF VAKUUTUS"];
 const INVEST_NAMES = ["Interactive Brokers", "Bitstamp"];
-
-const fileName = 'myAccount1.11.24-30.11.24';
 
 type TransactionDetails = { amount: number, shop: string, date: Date };
 
 export class TransactionAnalyzer {
 
     async run() {
-        const fileContent = this.readFile();
-        const transactions = await this.parseTransactionFiles(fileContent);
+        const fileName = 'Nordea2025-dailyAccount';//'nordea_everyday_transactions_1.12.2024-28.2.2025'; //'ING_April_2025';
+        let bankName = 'Nordea'
+        if (fileName.includes('ING')) {
+            bankName = 'ING'
+        }
+        const fileContent = this.readFile(fileName);
+        const transactions = await this.parseTransactionFiles(fileContent, bankName);
         const analysis = this.analyze(transactions);
         if (analysis) {
-            this.saveFile(JSON.stringify(analysis, null, 4));
+            this.saveFile(fileName, JSON.stringify(analysis, null, 4));
         }
     }
 
-    async parseTransactionFiles(fileContent: string): Promise<Transaction[]> {
-        const headers = ['bookingDate', 'amount', 'sender', 'recipient', 'name', 'title', 'referenceNumber', 'currency', 'empty'];
+    async parseTransactionFiles(fileContent: string, bankName?: string): Promise<Transaction[]> {
+        let headers: string[];
+        if (bankName === 'Nordea') {
+            headers = ['bookingDate', 'amount', 'sender', 'recipient', 'name', 'title', 'message', 'referenceNumber', 'balance', 'currency', 'empty'];
+        } else { // ING
+            headers = [
+                'Buchung',
+                'bookingDate', //'Wertstellungsdatum',
+                'title', // 'Auftraggeber/Empf�nger',
+                'Buchungstext',
+                'referenceNumber', // 'Verwendungszweck',
+                'Saldo', // 'Saldo',
+                'W�hrung',
+                'amount', //'Betrag',
+                'W�hrung'];
+        }
+
         return new Promise((resolve, reject) => {
             parse(fileContent, {
                 delimiter: ';',
@@ -154,7 +225,7 @@ export class TransactionAnalyzer {
         });
     }
 
-    private readFile() {
+    private readFile(fileName: string) {
         const csvFilePath = path.resolve(__dirname, '../transactionFiles/' + fileName + ".csv");
         return fs.readFileSync(csvFilePath, {encoding: 'utf-8'});
     }
@@ -260,6 +331,7 @@ export class TransactionAnalyzer {
                 investTransactions.push(transactionDetails);
             } else {
                 updateExpenses.other = (expenses ? expenses.other : 0) + amountCents;
+                transactionDetails.shop = transactionDetails.shop + " " + transaction.referenceNumber;
                 otherTransactions.push(transactionDetails);
             }
             monthExpenses.set(month, updateExpenses);
@@ -386,9 +458,9 @@ export class TransactionAnalyzer {
         return Math.round((Math.abs(categoryAmountCents / monthSummaCents) * 100) * 100) / 100;
     }
 
-    private saveFile(result: string) {
+    private saveFile(fileName: string, content: string) {
         const path = "analyzeResults/analysis_" + fileName + ".json";
-        fs.writeFile(path, result, function (err) {
+        fs.writeFile(path, content, function (err) {
             if (err) {
                 console.log(err);
             }
@@ -454,7 +526,7 @@ export class TransactionAnalyzer {
     }
 
     private skip(transaction: Transaction, shop: string, shopShortNames: string[]) {
-        const skipFirstRow = transaction.bookingDate.endsWith("Booking date");
+        const skipFirstRow = transaction.bookingDate.endsWith("Booking date") || transaction.bookingDate === 'Wertstellungsdatum';
         if (!skipFirstRow) {
             for (const shortShopName of shopShortNames) {
                 if (shop.toLowerCase().includes(shortShopName.toLowerCase())) {
