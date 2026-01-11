@@ -1,33 +1,44 @@
 {
-  "name": "investmenttargets",
-  "version": "1.0.0",
-  "description": "The project for analysing the possible targets for the investments.",
-  "main": "main.js",
+  "name": "transaction-analyzer",
+  "version": "0.1.0",
+  "description": "The project for expenses analysis",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "investmentTarget": "ts-node-esm src/index.ts",
-    "transactionAnalyzer": "ts-node src/main.ts",
-    "compile": "tsc",
+    "build": "tsc",
     "test": "jest"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vladt89/investmentTargets.git"
-  },
-  "devDependencies": {
-    "jest": "^29.3.1",
-    "ts-jest": "^29.0.3",
-    "@types/jest": "^29.2.2"
+    "url": "git+https://github.com/vladt89/transaction-analyzer.git"
   },
   "dependencies": {
-    "@types/node": "^18.11.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.8.4",
-    "csv-parse": "^5.3.1"
+    "csv-parse": "^6.1.0",
+    "papaparse": "^5.5.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.5",
+    "@types/papaparse": "^5.5.2",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/vladt89/investmentTargets/issues"
+    "url": "https://github.com/vladt89/transaction-analyzer/issues"
   },
-  "homepage": "https://github.com/vladt89/investmentTargets#readme"
+  "homepage": "https://github.com/vladt89/transaction-analyzer#readme"
 }

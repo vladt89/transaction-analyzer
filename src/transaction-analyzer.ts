@@ -1,6 +1,4 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import {CsvError, parse} from 'csv-parse';
+import Papa, {ParseResult} from "papaparse";
 
 type Transaction = {
     bookingDate: string;
@@ -27,6 +25,8 @@ interface Expenses {
     other: number,
     sum: number
 }
+
+type StringRecord = Record<string, string>;
 
 const SKIP_SHOPS_SHORT_NAMES = [
     "ATM",
@@ -180,18 +180,13 @@ type TransactionDetails = { amount: number, shop: string, date: Date };
 
 export class TransactionAnalyzer {
 
-    async run() {
-        const fileName = 'Nordea2025-dailyAccount';//'nordea_everyday_transactions_1.12.2024-28.2.2025'; //'ING_April_2025';
-        let bankName = 'Nordea'
-        if (fileName.includes('ING')) {
-            bankName = 'ING'
-        }
-        const fileContent = this.readFile(fileName);
+    /**
+     * UI-friendly entrypoint: pass CSV file content and (optionally) the bank format.
+     * Returns the computed analysis object (no filesystem writes).
+     */
+    async analyzeCsvContent(fileContent: string, bankName: 'Nordea' | 'ING' = 'Nordea') {
         const transactions = await this.parseTransactionFiles(fileContent, bankName);
-        const analysis = this.analyze(transactions);
-        if (analysis) {
-            this.saveFile(fileName, JSON.stringify(analysis, null, 4));
-        }
+        return this.analyze(transactions);
     }
 
     async parseTransactionFiles(fileContent: string, bankName?: string): Promise<Transaction[]> {
@@ -211,23 +206,64 @@ export class TransactionAnalyzer {
                 'W�hrung'];
         }
 
-        return new Promise((resolve, reject) => {
-            parse(fileContent, {
-                delimiter: ';',
-                columns: headers,
-            }, (error: CsvError | undefined, transactions: Transaction[]) => {
-                if (error) {
-                    console.error(error);
-                    reject(error);
-                }
-                resolve(transactions);
+        return new Promise<Transaction[]>((resolve, reject) => {
+            Papa.parse<string[]>(fileContent, {
+                delimiter: ";",
+                skipEmptyLines: true,
+                header: false,              // we supply our own headers
+                quoteChar: '"',
+                complete: (results: ParseResult<string[]>) => {
+                    if (results.errors.length) {
+                        reject(new Error(results.errors[0].message));
+                        return;
+                    }
+
+                    let rows = results.data;
+
+                    // Optional: skip the first row if it looks like the CSV header row
+                    if (rows.length && this.isProbablyHeaderRow(rows[0])) {
+                        rows = rows.slice(1);
+                    }
+
+                    const transactions: Transaction[] = rows.map((row: string[]) => {
+                        const rec = this.rowToRecord(headers, row);
+                        return this.pickTransaction(rec);
+                    });
+
+                    resolve(transactions);
+                },
+                error: (err: unknown) => reject(err),
             });
         });
     }
 
-    private readFile(fileName: string) {
-        const csvFilePath = path.resolve(__dirname, '../transactionFiles/' + fileName + ".csv");
-        return fs.readFileSync(csvFilePath, {encoding: 'utf-8'});
+    isProbablyHeaderRow(row: readonly string[]): boolean {
+        // adjust to your actual CSV; this is a safe generic check
+        return row.some((c) => c.toLowerCase().includes("booking date") || c.toLowerCase().includes("wertstellungsdatum"));
+    }
+
+    rowToRecord(headers: readonly string[], row: readonly string[]): StringRecord {
+        const out: StringRecord = {};
+        for (let i = 0; i < headers.length; i++) {
+            out[headers[i]] = row[i] ?? "";
+        }
+        return out;
+    }
+
+    pickTransaction(rec: StringRecord): Transaction {
+        // Only pick what your analyzer actually uses.
+        // Note: your code uses transaction.title, bookingDate, amount, referenceNumber.
+        return {
+            bookingDate: rec.bookingDate ?? "",
+            amount: rec.amount ?? "",
+            sender: rec.sender ?? "",
+            recipient: rec.recipient ?? "",
+            name: rec.name ?? "",
+            title: rec.title ?? "",
+            referenceNumber: rec.referenceNumber ?? "",
+            balance: rec.balance ?? "",
+            currency: rec.currency ?? "",
+        };
     }
 
     analyze(transactions: Transaction[]): {averageMonthExpenses: string, monthlyExpenses: any[]} {
@@ -266,7 +302,7 @@ export class TransactionAnalyzer {
             } else {
                 transaction.amount = transaction.amount + "00";
             }
-            const amountCents = parseInt(transaction.amount);
+            const amountCents = Number.parseInt(transaction.amount);
             if (amountCents > 0) { // NOTE: we don't care about the income as we want to analyze the expenses
                 continue;
             }
@@ -458,16 +494,6 @@ export class TransactionAnalyzer {
         return Math.round((Math.abs(categoryAmountCents / monthSummaCents) * 100) * 100) / 100;
     }
 
-    private saveFile(fileName: string, content: string) {
-        const path = "analyzeResults/analysis_" + fileName + ".json";
-        fs.writeFile(path, content, function (err) {
-            if (err) {
-                console.log(err);
-            }
-            console.log("Analyzed file is saved to " + path);
-        });
-    }
-
     private getCategoryAnalysis(expenses: [any, any], topHouseAndFurniture: any[], month: any) {
         const cents = expenses[1].houseAndFurniture;
         let transactionSum = 0;
@@ -479,7 +505,7 @@ export class TransactionAnalyzer {
         }
         return {
             amount: this.centsToFloatEuros(cents),
-            percentage: parseInt(((cents / expenses[1].sum) * 100).toString()),
+            percentage: Number.parseInt(((cents / expenses[1].sum) * 100).toString()),
             transactions: this.transactionsToJson(topHouseAndFurniture, month)
         };
     }
@@ -522,7 +548,7 @@ export class TransactionAnalyzer {
         }
         const mainPart = strAmount.slice(0, strAmount.length - 2);
         const restPart = strAmount.slice(strAmount.length - 2);
-        return parseFloat(mainPart + "." + restPart);
+        return Number.parseFloat(mainPart + "." + restPart);
     }
 
     private skip(transaction: Transaction, shop: string, shopShortNames: string[]) {
