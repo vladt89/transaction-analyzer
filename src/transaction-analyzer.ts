@@ -367,7 +367,6 @@ export class TransactionAnalyzer {
                 investTransactions.push(transactionDetails);
             } else {
                 updateExpenses.other = (expenses ? expenses.other : 0) + amountCents;
-                transactionDetails.shop = transactionDetails.shop + " " + transaction.referenceNumber;
                 otherTransactions.push(transactionDetails);
             }
             monthExpenses.set(month, updateExpenses);
