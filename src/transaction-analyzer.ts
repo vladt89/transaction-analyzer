@@ -385,7 +385,9 @@ export class TransactionAnalyzer {
     }
 
     private getMonth(date: Date) {
-        return date.toLocaleString('default', {month: 'long', year: 'numeric'});
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        return `${year}-${month}`;
     }
 
     private analyzeMonthlyExpenses(monthExpenses: Map<any, Expenses>,

@@ -2,7 +2,7 @@ import {TransactionAnalyzer} from "../src";
 import FileUtils from "../src/file-utils";
 
 
-describe('Transaction analyzer', () => {
+describe('TransactionAnalyzerTest', () => {
     const transactionAnalyzer = new TransactionAnalyzer();
 
     it.skip('should run the analyzer', async () => {
@@ -79,7 +79,7 @@ describe('Transaction analyzer', () => {
                             "amount": 49.7,
                             "percentage": 35.33,
                             "transactions": {
-                                "1": "spent 49.7 euros in HPY*PDFZEN CO 251208200416 on Wed Dec 10 2025",
+                                "1": "spent 49.7 euros in HPY*PDFZEN CO on Wed Dec 10 2025",
                                 "on average": "spent 49.7 euros"
                             }
                         },
@@ -94,7 +94,7 @@ describe('Transaction analyzer', () => {
                             "transactions": {}
                         }
                     },
-                    "month": "December 2025",
+                    "month": "2025-12",
                     "sum": "140.66 euros"
                 }
             ]
