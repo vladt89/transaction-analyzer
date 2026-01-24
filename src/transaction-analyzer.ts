@@ -43,6 +43,10 @@ const SKIP_SHOPS_SHORT_NAMES = [
     // "Lahitapiola Rahoitus", // Valentin
     // "Jusek Adlersztejn", // deposit for Berlin's flat
     "AMAZON* R46Z74LV4", // kinderwagen that we returned
+    // FLAT
+    "ARTUR KARAZANOV", // not in personal finance
+    "Paytrail Oyj DNA Oyj Mobiilipa", // flat internet
+    "Helen Oy", // electricity
 ];
 
 const FOOD_SHOPS_SHORT_NAMES = ["ALEPA", "LIDL", "PRISMA", "K-supermarket", "K-market", "S-Market", "K-Citymarket",
@@ -90,6 +94,7 @@ const KIDS_FAMILY_NAMES = ["Phoenix Partners Ky/LaughLearn", "MUSTI JA MIRRI", "
     "SUOMISPORT", // chess license for Leo
     "Christina Weiner", // aliments
     "HELSINGIN KAUPUNKI", // продленка
+    "Perhekeskus Maria",
 ];
 const SPORT_FOOD_FUN_NAMES = ["TALIHALLI", "ACTIVE GROUP RY", "VFI*Rami's Coffee Oy", "Inna Repo", "Asian Fusion Oy",
     "SEIKKAILUPUISTO ZIPPY", "INTER RAVINTOLA", "INTER PIZZA", "Electrobike", "XXL", "RESTAURANT", "PoplaCandy",
@@ -125,6 +130,9 @@ const SPORT_FOOD_FUN_NAMES = ["TALIHALLI", "ACTIVE GROUP RY", "VFI*Rami's Coffee
     "CABRIOLI",
     "SOLBAD",
     "GOLD WOK",
+    "Alpine",
+    "DECATHLON",
+    "TSAGHKADZOR ROPEWAY",
 ];
 const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PARKMAN", "Parking", "TANKSTELLE",
     "AIMO PARK", "Teboil", "SHELL", "LansiAuto", "ODNO KOLESO", "TANKSTATION", "Aral Station", "TRAFICOM", "SHELL",
@@ -140,6 +148,7 @@ const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PAR
     "ESSO STATION", // petrol station
     "PARKSERVICE",
     "A.T.U.",
+    "fair parken GmbH"
 ];
 const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel", "BOLT", "PAYTRAIL",
     "DIRECTF", "MOTEL", "RENT A CAR", "RAILW", "CORENDONAIRLINES", "FINNAIR", "SAMUEL LINDBLOM",
@@ -168,6 +177,10 @@ const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel"
     "WIZZAIR",
     "FLIXBUS",
     "BVG",
+    "FlixTrain",
+    "FLUGLADEN",
+    "Holiday Inn",
+    "Museum",
 ];
 const HEALTH_NAMES = ["TERVEYSTALO MYYRMAKI", "Specsavers", "Malminkartanon apteekki", "CENTR KORREKCII ZRENIYA",
     "APTEKA", "SILMAASEMA", "HUS", "APOTHEKE", "ELAINSAIRAALA", "Apteekki", "Myyrmannin apt", "Fysio Sakura",
