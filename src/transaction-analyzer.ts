@@ -37,8 +37,8 @@ const SKIP_SHOPS_SHORT_NAMES = [
     // "NH COLLECTION MILANO CITY", // Milan trip
     // "PIHLAJALINNA HA", //Partio insurance should cover
     // "AUTODOC", "KLM", // returned
-    "TIKHOMIROV VLADIMIR",
-    "Vladimir Tikhomirov",
+    // "TIKHOMIROV VLADIMIR",
+    // "Vladimir Tikhomirov",
     "Interactive Brokers", "Bitstamp", // investments, which are not expenses as such
     // "Lahitapiola Rahoitus", // Valentin
     // "Jusek Adlersztejn", // deposit for Berlin's flat
@@ -59,6 +59,7 @@ const FOOD_SHOPS_SHORT_NAMES = ["ALEPA", "LIDL", "PRISMA", "K-supermarket", "K-m
     "ELLI",
     "ZABKA", // Polish supermarket
     "CONSUM",
+    "PENNY",
 ];
 const HOUSE_SHOPS_SHORT_NAMES = ["Asunto Oy Kuparikartano", "IKEA", "K-Rauta", "Helen Oy", "TIKHOMIROV V TAI WEINER C",
     "Elisa Oyj", "BAUHAUS", "BAUMARKT", "MIKKO UGOLNIKOV", "Gigantti",
@@ -78,6 +79,8 @@ const HOUSE_SHOPS_SHORT_NAMES = ["Asunto Oy Kuparikartano", "IKEA", "K-Rauta", "
     "JYSK",
     "MEDIAMARKT",
     "ARTUR KARAZANOV",
+    "Miete",
+    "PremiumSIM", // handy
 ];
 const KIDS_FAMILY_NAMES = ["Phoenix Partners Ky/LaughLearn", "MUSTI JA MIRRI", "VETKLINIKA VOLF", "EVGENIJA KRUGLOVA",
     "PERHEKESKUS MARIA RY", "Seikkailupuisto Korkee", "HIIHTOSEURA",
@@ -148,7 +151,8 @@ const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PAR
     "ESSO STATION", // petrol station
     "PARKSERVICE",
     "A.T.U.",
-    "fair parken GmbH"
+    "fair parken GmbH",
+    "JET",
 ];
 const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel", "BOLT", "PAYTRAIL",
     "DIRECTF", "MOTEL", "RENT A CAR", "RAILW", "CORENDONAIRLINES", "FINNAIR", "SAMUEL LINDBLOM",
@@ -186,7 +190,7 @@ const HEALTH_NAMES = ["TERVEYSTALO MYYRMAKI", "Specsavers", "Malminkartanon apte
     "APTEKA", "SILMAASEMA", "HUS", "APOTHEKE", "ELAINSAIRAALA", "Apteekki", "Myyrmannin apt", "Fysio Sakura",
     "apteek", "FARMACIA", "MISTER SPEX" // contact lenses
 ];
-const INSURANCE_NAMES = ["POHJOLA VAKUUTUS OY", "IF VAKUUTUS"];
+const INSURANCE_NAMES = ["POHJOLA VAKUUTUS OY", "IF VAKUUTUS", "AOK", "Versicherungs"];
 const INVEST_NAMES = ["Interactive Brokers", "Bitstamp"];
 
 type TransactionDetails = { amount: number, shop: string, date: Date };
@@ -197,8 +201,15 @@ export class TransactionAnalyzer {
      * UI-friendly entrypoint: pass CSV file content and (optionally) the bank format.
      * Returns the computed analysis object (no filesystem writes).
      */
-    async analyzeCsvContent(fileContent: string, bankName: 'Nordea' | 'ING' = 'Nordea') {
-        const transactions = await this.parseTransactionFiles(fileContent, bankName);
+    async analyzeCsvContent(
+        fileContent: string,
+        bankName: 'Nordea' | 'ING' | 'Commerzbank' = 'Nordea',
+        fileName?: string
+    ) {
+        const detectedBankName: 'Nordea' | 'ING' | 'Commerzbank' =
+            fileName && fileName.toLowerCase().includes('commerz') ? 'Commerzbank' : bankName;
+
+        const transactions = await this.parseTransactionFiles(fileContent, detectedBankName);
         return this.analyze(transactions);
     }
 
@@ -206,6 +217,18 @@ export class TransactionAnalyzer {
         let headers: string[];
         if (bankName === 'Nordea') {
             headers = ['bookingDate', 'amount', 'sender', 'recipient', 'name', 'title', 'message', 'referenceNumber', 'balance', 'currency', 'empty'];
+        } else if (bankName === 'Commerzbank') {
+            // Buchungstag;Wertstellung;Umsatzart;Buchungstext;Betrag;Währung;IBAN Kontoinhaber;Kategorie
+            headers = [
+                'bookingDate',        // Buchungstag
+                'valueDate',          // Wertstellung
+                'bookingType',        // Umsatzart
+                'title',              // Buchungstext
+                'amount',             // Betrag
+                'currency',           // Währung
+                'sender',             // IBAN Kontoinhaber (not used in analysis, but kept)
+                'name'                // Kategorie (kept for future)
+            ];
         } else { // ING
             headers = [
                 'Buchung',
@@ -216,7 +239,8 @@ export class TransactionAnalyzer {
                 'Saldo', // 'Saldo',
                 'W�hrung',
                 'amount', //'Betrag',
-                'W�hrung'];
+                'W�hrung'
+            ];
         }
 
         return new Promise<Transaction[]>((resolve, reject) => {
@@ -252,7 +276,15 @@ export class TransactionAnalyzer {
 
     isProbablyHeaderRow(row: readonly string[]): boolean {
         // adjust to your actual CSV; this is a safe generic check
-        return row.some((c) => c.toLowerCase().includes("booking date") || c.toLowerCase().includes("wertstellungsdatum"));
+        return row.some((c) => {
+            const lc = c.toLowerCase();
+            return (
+                lc.includes('booking date') ||
+                lc.includes('wertstellungsdatum') ||
+                lc.includes('buchungstag') ||
+                lc.includes('buchungstext')
+            );
+        });
     }
 
     rowToRecord(headers: readonly string[], row: readonly string[]): StringRecord {
@@ -273,7 +305,7 @@ export class TransactionAnalyzer {
             recipient: rec.recipient ?? "",
             name: rec.name ?? "",
             title: rec.title ?? "",
-            referenceNumber: rec.referenceNumber ?? "",
+            referenceNumber: rec.referenceNumber ?? rec.message ?? "",
             balance: rec.balance ?? "",
             currency: rec.currency ?? "",
         };
@@ -492,6 +524,13 @@ export class TransactionAnalyzer {
         }
 
         const monthCount = monthExpenses.size;
+        if (monthCount === 0) {
+            return {
+                averageMonthExpenses: '0 euros',
+                monthlyExpenses: []
+            };
+        }
+
         const averageMonthExpenses = Math.round((this.centsToFloatEuros(allFileSumma) / monthCount) * 100) / 100;
         const averageMonthExpensesStr = averageMonthExpenses + " euros";
         console.log(averageMonthExpensesStr + " is average monthly expenses during the period of " + monthCount + " month(s)");
