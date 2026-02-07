@@ -1,30 +1,7 @@
+import type { Transaction } from "./entities/transaction";
 import Papa, {ParseResult} from "papaparse";
-
-type Transaction = {
-    bookingDate: string;
-    amount: string;
-    sender: string;
-    recipient: string;
-    name: string;
-    title: string;
-    referenceNumber: string;
-    balance: string;
-    currency: string;
-};
-
-interface Expenses {
-    food: number,
-    houseAndFurniture: number,
-    carAndTransport: number,
-    kids: number,
-    insurance: number,
-    travel: number,
-    sportEatFun: number,
-    health: number,
-    invest: number,
-    other: number,
-    sum: number
-}
+import {CategoryDefinition} from "./entities/category";
+import {CategoryKey, Expenses} from "./entities/expenses";
 
 type StringRecord = Record<string, string>;
 
@@ -37,8 +14,8 @@ const SKIP_SHOPS_SHORT_NAMES = [
     // "NH COLLECTION MILANO CITY", // Milan trip
     // "PIHLAJALINNA HA", //Partio insurance should cover
     // "AUTODOC", "KLM", // returned
-    // "TIKHOMIROV VLADIMIR",
-    // "Vladimir Tikhomirov",
+    "TIKHOMIROV VLADIMIR",
+    "Vladimir Tikhomirov",
     "Interactive Brokers", "Bitstamp", // investments, which are not expenses as such
     // "Lahitapiola Rahoitus", // Valentin
     // "Jusek Adlersztejn", // deposit for Berlin's flat
@@ -156,7 +133,7 @@ const CAR_TRANSPORT_SHOPS_SHORT_NAMES = ["NESTE", "HSL", "HELPPOKATSASTUS", "PAR
 ];
 const TRAVEL_NAMES = ["VIKING LINE", "Tallink", "FINNLADY", "FINNLINES", "Hotel", "BOLT", "PAYTRAIL",
     "DIRECTF", "MOTEL", "RENT A CAR", "RAILW", "CORENDONAIRLINES", "FINNAIR", "SAMUEL LINDBLOM",
-    "Milano Portello", 
+    "Milano Portello",
     "Trustly Group AB", // finnair
     "Scandic Skarholmen FO", "SCANDLINES DEUTSCHLAND GM", "CINDERELLA",
     "VASAMUSEET", "VISIT VADSTENA",
@@ -192,6 +169,18 @@ const HEALTH_NAMES = ["TERVEYSTALO MYYRMAKI", "Specsavers", "Malminkartanon apte
 ];
 const INSURANCE_NAMES = ["POHJOLA VAKUUTUS OY", "IF VAKUUTUS", "AOK", "Versicherungs"];
 const INVEST_NAMES = ["Interactive Brokers", "Bitstamp"];
+
+const DEFAULT_CATEGORY_DEFINITIONS: readonly CategoryDefinition[] = [
+    { key: 'food', merchantShortNames: FOOD_SHOPS_SHORT_NAMES },
+    { key: 'houseAndFurniture', merchantShortNames: HOUSE_SHOPS_SHORT_NAMES },
+    { key: 'carAndTransport', merchantShortNames: CAR_TRANSPORT_SHOPS_SHORT_NAMES },
+    { key: 'kids', merchantShortNames: KIDS_FAMILY_NAMES },
+    { key: 'insurance', merchantShortNames: INSURANCE_NAMES },
+    { key: 'travel', merchantShortNames: TRAVEL_NAMES },
+    { key: 'sportEatFun', merchantShortNames: SPORT_FOOD_FUN_NAMES },
+    { key: 'health', merchantShortNames: HEALTH_NAMES },
+    { key: 'invest', merchantShortNames: INVEST_NAMES },
+];
 
 type TransactionDetails = { amount: number, shop: string, date: Date };
 
@@ -311,18 +300,29 @@ export class TransactionAnalyzer {
         };
     }
 
-    analyze(transactions: Transaction[]): {averageMonthExpenses: string, monthlyExpenses: any[]} {
+    /**
+     * The core function which does the transaction analysis.
+     *
+     * @param transactions transactions that are needed to be analysed
+     * @param categoryDefinitions optional category definitions for merchant matching
+     */
+    analyze(
+        transactions: Transaction[],
+        categoryDefinitions: readonly CategoryDefinition[] = DEFAULT_CATEGORY_DEFINITIONS
+    ): { averageMonthExpenses: string, monthlyExpenses: any[] } {
         const monthExpenses = new Map<string, Expenses>();
-        let foodTransactions: TransactionDetails[] = [];
-        let houseAndFurnitureTransactions: TransactionDetails[] = [];
-        let carAndTransportTransactions: TransactionDetails[] = [];
-        let kidsTransactions: TransactionDetails[] = [];
-        let insuranceTransactions: TransactionDetails[] = [];
-        let travelTransactions: TransactionDetails[] = [];
-        let sportsEatFunTransactions: TransactionDetails[] = [];
-        let healthTransactions: TransactionDetails[] = [];
-        let investTransactions: TransactionDetails[] = [];
-        let otherTransactions: TransactionDetails[] = [];
+        const transactionsByCategory: Record<CategoryKey, TransactionDetails[]> = {
+            food: [],
+            houseAndFurniture: [],
+            carAndTransport: [],
+            kids: [],
+            insurance: [],
+            travel: [],
+            sportEatFun: [],
+            health: [],
+            invest: [],
+            other: [],
+        };
         for (const transaction of transactions) {
             const shop = transaction.title;
             if (this.skip(transaction, shop, SKIP_SHOPS_SHORT_NAMES)) {
@@ -382,38 +382,20 @@ export class TransactionAnalyzer {
                     sum: expenses.sum + amountCents
                 };
             }
-            const transactionDetails: TransactionDetails = {amount: Math.abs(amountCents), shop, date};
-            if (this.matchShop(shop, FOOD_SHOPS_SHORT_NAMES)) {
-                updateExpenses.food = (expenses ? expenses.food : 0) + amountCents;
-                foodTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, HOUSE_SHOPS_SHORT_NAMES)) {
-                updateExpenses.houseAndFurniture = (expenses ? expenses.houseAndFurniture : 0) + amountCents;
-                houseAndFurnitureTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, CAR_TRANSPORT_SHOPS_SHORT_NAMES)) {
-                updateExpenses.carAndTransport = (expenses ? expenses.carAndTransport : 0) + amountCents;
-                carAndTransportTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, KIDS_FAMILY_NAMES)) {
-                updateExpenses.kids = (expenses ? expenses.kids : 0) + amountCents;
-                kidsTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, INSURANCE_NAMES)) {
-                updateExpenses.insurance = (expenses ? expenses.insurance : 0) + amountCents;
-                insuranceTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, TRAVEL_NAMES)) {
-                updateExpenses.travel = (expenses ? expenses.travel : 0) + amountCents;
-                travelTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, SPORT_FOOD_FUN_NAMES)) {
-                updateExpenses.sportEatFun = (expenses ? expenses.sportEatFun : 0) + amountCents;
-                sportsEatFunTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, HEALTH_NAMES)) {
-                updateExpenses.health = (expenses ? expenses.health : 0) + amountCents;
-                healthTransactions.push(transactionDetails);
-            } else if (this.matchShop(shop, INVEST_NAMES)) {
-                updateExpenses.invest = (expenses ? expenses.invest : 0) + amountCents;
-                investTransactions.push(transactionDetails);
-            } else {
-                updateExpenses.other = (expenses ? expenses.other : 0) + amountCents;
-                otherTransactions.push(transactionDetails);
+            const transactionDetails: TransactionDetails = { amount: Math.abs(amountCents), shop, date };
+
+            let matchedCategory: CategoryKey = 'other';
+            for (const def of categoryDefinitions) {
+                if (this.matchShop(shop, def.merchantShortNames)) {
+                    matchedCategory = def.key;
+                    break;
+                }
             }
+
+            // Update the selected category bucket (keep identical math to the previous if/else chain)
+            (updateExpenses as any)[matchedCategory] = ((expenses as any)?.[matchedCategory] ?? 0) + amountCents;
+            transactionsByCategory[matchedCategory].push(transactionDetails);
+
             monthExpenses.set(month, updateExpenses);
             const sum = updateExpenses.food + updateExpenses.houseAndFurniture + updateExpenses.carAndTransport
                 + updateExpenses.kids + updateExpenses.insurance + updateExpenses.travel + updateExpenses.sportEatFun
@@ -424,9 +406,7 @@ export class TransactionAnalyzer {
             }
         }
 
-        return this.analyzeMonthlyExpenses(monthExpenses, foodTransactions, houseAndFurnitureTransactions,
-            carAndTransportTransactions, kidsTransactions, insuranceTransactions, travelTransactions,
-            sportsEatFunTransactions, healthTransactions, investTransactions, otherTransactions);
+        return this.analyzeMonthlyExpenses(monthExpenses, transactionsByCategory);
     }
 
     private getMonth(date: Date) {
@@ -435,17 +415,10 @@ export class TransactionAnalyzer {
         return `${year}-${month}`;
     }
 
-    private analyzeMonthlyExpenses(monthExpenses: Map<any, Expenses>,
-                                   foodTransactions: TransactionDetails[],
-                                   houseAndFurnitureTransactions: TransactionDetails[],
-                                   carAndTransportTransactions: TransactionDetails[],
-                                   kidsTransactions: TransactionDetails[],
-                                   insuranceTransactions: TransactionDetails[],
-                                   travelTransactions: TransactionDetails[],
-                                   sportsEatFunTransactions: TransactionDetails[],
-                                   healthTransactions: TransactionDetails[],
-                                   investTransactions: TransactionDetails[],
-                                   otherTransactions: TransactionDetails[]): {averageMonthExpenses: string, monthlyExpenses: any[]} {
+    private analyzeMonthlyExpenses(
+        monthExpenses: Map<any, Expenses>,
+        transactionsByCategory: Record<CategoryKey, TransactionDetails[]>
+    ): { averageMonthExpenses: string, monthlyExpenses: any[] } {
         let polishedExpenses: any[] = [];
         let allFileSumma = 0;
         for (const month of monthExpenses.keys()) {
@@ -472,52 +445,52 @@ export class TransactionAnalyzer {
                     food: {
                         amount: this.centsToFloatEuros(foodAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(foodAmount, monthSumma),
-                        transactions: this.transactionsToJson(foodTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.food, month)
                     },
                     houseAndFurniture: {
                         amount: this.centsToFloatEuros(houseAndFurnitureAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(houseAndFurnitureAmount, monthSumma),
-                        transactions: this.transactionsToJson(houseAndFurnitureTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.houseAndFurniture, month)
                     },
                     carAndTransport: {
                         amount: this.centsToFloatEuros(carAndTransportAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(carAndTransportAmount, monthSumma),
-                        transactions: this.transactionsToJson(carAndTransportTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.carAndTransport, month)
                     },
                     kids: {
                         amount: this.centsToFloatEuros(kidsAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(kidsAmount, monthSumma),
-                        transactions: this.transactionsToJson(kidsTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.kids, month)
                     },
                     insurance: {
                         amount: this.centsToFloatEuros(insuranceAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(insuranceAmount, monthSumma),
-                        transactions: this.transactionsToJson(insuranceTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.insurance, month)
                     },
                     travel: {
                         amount: this.centsToFloatEuros(travelAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(travelAmount, monthSumma),
-                        transactions: this.transactionsToJson(travelTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.travel, month)
                     },
                     sportEatFun: {
                         amount: this.centsToFloatEuros(sportEatFunAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(sportEatFunAmount, monthSumma),
-                        transactions: this.transactionsToJson(sportsEatFunTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.sportEatFun, month)
                     },
                     health: {
                         amount: this.centsToFloatEuros(healthAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(healthAmount, monthSumma),
-                        transactions: this.transactionsToJson(healthTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.health, month)
                     },
                     invest: {
                         amount: this.centsToFloatEuros(investAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(investAmount, monthSumma),
-                        transactions: this.transactionsToJson(investTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.invest, month)
                     },
                     other: {
                         amount: this.centsToFloatEuros(otherAmount),
                         percentage: TransactionAnalyzer.calculatePercentage(otherAmount, monthSumma),
-                        transactions: this.transactionsToJson(otherTransactions, month)
+                        transactions: this.transactionsToJson(transactionsByCategory.other, month)
                     }
                 }
             });

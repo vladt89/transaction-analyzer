@@ -6,9 +6,9 @@ describe('TransactionAnalyzerTest', () => {
     const transactionAnalyzer = new TransactionAnalyzer();
 
     it.skip('should run the analyzer', async () => {
-        const fileName = 'Nordea2025-dailyAccount';
+        const fileName = 'Commerz';
         const fileContent = await FileUtils.readFile(fileName);
-        const analysis = await transactionAnalyzer.analyzeCsvContent(fileContent);
+        const analysis = await transactionAnalyzer.analyzeCsvContent(fileContent, 'Commerzbank');
         if (analysis) {
             await FileUtils.saveFile(fileName, JSON.stringify(analysis, null, 4));
         }
@@ -31,74 +31,72 @@ describe('TransactionAnalyzerTest', () => {
         // exercise
         const analyzeResult = transactionAnalyzer.analyze(transactions);
         expect(analyzeResult).toEqual({
-            "averageMonthExpenses": "140.66 euros",
-            "monthlyExpenses": [
-                {
-                    "categories": {
-                        "carAndTransport": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "food": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "health": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "houseAndFurniture": {
-                            "amount": 90.96,
-                            "percentage": 64.67,
-                            "transactions": {
-                                "1": "spent 41.69 euros in ELISA OYJ on Tue Dec 09 2025",
-                                "2": "spent 28.33 euros in Paytrail Oyj DNA Oyj Mobiilipa on Tue Dec 09 2025",
-                                "3": "spent 20.94 euros in Helen Oy on Fri Dec 19 2025",
-                                "on average": "spent 30.32 euros"
+                "averageMonthExpenses": "91.39 euros",
+                "monthlyExpenses": [
+                    {
+                        "categories": {
+                            "carAndTransport": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "food": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "health": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "houseAndFurniture": {
+                                "amount": 41.69,
+                                "percentage": 45.62,
+                                "transactions": {
+                                    "1": "spent 41.69 euros in ELISA OYJ on Tue Dec 09 2025",
+                                    "on average": "spent 41.69 euros"
+                                }
+                            },
+                            "insurance": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "invest": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "kids": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "other": {
+                                "amount": 49.7,
+                                "percentage": 54.38,
+                                "transactions": {
+                                    "1": "spent 49.7 euros in HPY*PDFZEN CO on Wed Dec 10 2025",
+                                    "on average": "spent 49.7 euros"
+                                }
+                            },
+                            "sportEatFun": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
+                            },
+                            "travel": {
+                                "amount": 0,
+                                "percentage": 0,
+                                "transactions": {}
                             }
                         },
-                        "insurance": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "invest": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "kids": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "other": {
-                            "amount": 49.7,
-                            "percentage": 35.33,
-                            "transactions": {
-                                "1": "spent 49.7 euros in HPY*PDFZEN CO on Wed Dec 10 2025",
-                                "on average": "spent 49.7 euros"
-                            }
-                        },
-                        "sportEatFun": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        },
-                        "travel": {
-                            "amount": 0,
-                            "percentage": 0,
-                            "transactions": {}
-                        }
-                    },
-                    "month": "2025-12",
-                    "sum": "140.66 euros"
-                }
-            ]
-        });
+                        "month": "2025-12",
+                        "sum": "91.39 euros"
+                    }
+                ]
+            });
     });
 
     it('should verify that the sum is correct for 1 month', async () => {
