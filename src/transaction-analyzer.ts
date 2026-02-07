@@ -193,13 +193,14 @@ export class TransactionAnalyzer {
     async analyzeCsvContent(
         fileContent: string,
         bankName: 'Nordea' | 'ING' | 'Commerzbank' = 'Nordea',
-        fileName?: string
+        fileName?: string,
+        categoryDefinitions?: readonly CategoryDefinition[]
     ) {
         const detectedBankName: 'Nordea' | 'ING' | 'Commerzbank' =
-            fileName && fileName.toLowerCase().includes('commerz') ? 'Commerzbank' : bankName;
+            fileName?.toLowerCase().includes('commerz') ? 'Commerzbank' : bankName;
 
         const transactions = await this.parseTransactionFiles(fileContent, detectedBankName);
-        return this.analyze(transactions);
+        return this.analyze(transactions, categoryDefinitions);
     }
 
     async parseTransactionFiles(fileContent: string, bankName?: string): Promise<Transaction[]> {
